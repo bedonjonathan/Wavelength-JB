@@ -22,4 +22,4 @@ All spectrums are in [`js/decks.js`](js/decks.js). Each card is `{ q: "optional 
 
 ## Deploying to GitHub Pages
 1. In the repo on GitHub, go to **Settings → Pages → Build and deployment → Source** and choose **GitHub Actions**.
-2. Push to `main`. The workflow in `.github/workflows/pages.yml` publishes the site.
+2. Push to `main`. The workflow in `.github/workflows/static.yml` publishes the site.
