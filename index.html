@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>On the Same Wave</title>
+  <meta name="description" content="A pass-and-play spectrum guessing game for couples, friends and parties.">
+  <meta name="theme-color" content="#5b6cff">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <button class="btn btn-ghost" id="btnHowTo" type="button">How to Play</button>
+    <select id="themeSelect" class="theme-select" aria-label="Visual theme"></select>
+    <button class="btn btn-danger" id="btnNewGame" type="button">New Game</button>
+  </header>
+
+  <h1 class="title">On the Same <span>Wave</span></h1>
+
+  <!-- ============ SETUP ============ -->
+  <main id="setupScreen" class="screen">
+    <section class="card">
+      <h2>Game mode</h2>
+      <div class="segmented" role="radiogroup" aria-label="Game mode">
+        <button type="button" data-mode="couple" class="seg active">💞 Couple</button>
+        <button type="button" data-mode="teams" class="seg">👥 Teams</button>
+      </div>
+      <p class="hint" id="modeHint"></p>
+    </section>
+
+    <section class="card" id="coupleSetup">
+      <h2>Partners</h2>
+      <div class="field-row">
+        <input id="partnerA" class="input" maxlength="24" placeholder="Partner 1" autocomplete="off">
+        <span class="heart">♥</span>
+        <input id="partnerB" class="input" maxlength="24" placeholder="Partner 2" autocomplete="off">
+      </div>
+    </section>
+
+    <section class="card hidden" id="teamsSetup">
+      <h2>Teams</h2>
+      <ul id="teamList" class="team-edit-list"></ul>
+      <button type="button" class="btn btn-secondary btn-small" id="btnAddTeamSetup">+ Add Team</button>
+    </section>
+
+    <section class="card">
+      <h2>Spectrum decks</h2>
+      <div id="deckList" class="deck-list"></div>
+      <button type="button" class="btn btn-secondary btn-small" id="btnCustom">✏️ My Spectrums (<span id="customCount">0</span>)</button>
+    </section>
+
+    <section class="card">
+      <h2>Rules</h2>
+      <label class="setting">
+        <span>Where the target comes from</span>
+        <select id="targetSource" class="input">
+          <option value="honest">Psychic sets their honest answer</option>
+          <option value="random">Random target (classic)</option>
+        </select>
+      </label>
+      <label class="setting">
+        <span>Guessing timer</span>
+        <select id="timerSelect" class="input">
+          <option value="0">Off</option>
+          <option value="30">30 seconds</option>
+          <option value="60">60 seconds</option>
+          <option value="90">90 seconds</option>
+          <option value="120">2 minutes</option>
+        </select>
+      </label>
+      <label class="setting" id="stealSetting">
+        <span>Left / Right steal for the other team</span>
+        <input type="checkbox" id="stealToggle" class="switch" checked>
+      </label>
+    </section>
+
+    <button type="button" class="btn btn-primary btn-big" id="btnStart">Start Playing 🌊</button>
+  </main>
+
+  <!-- ============ GAME ============ -->
+  <main id="gameScreen" class="screen hidden">
+    <div class="pill" id="statusPill">
+      <span class="pill-emoji" id="pillEmoji">🔮</span>
+      <span class="pill-label" id="pillLabel">PSYCHIC TURN</span>
+      <span class="pill-name" id="pillName">Team 1</span>
+    </div>
+
+    <p class="instructions" id="instructions"></p>
+    <p class="timer hidden" id="timer" aria-live="polite"></p>
+    <p class="result hidden" id="result"></p>
+
+    <div class="peek-warning hidden" id="peekWarning">👀 Target is showing — guessers, look away!</div>
+
+    <p class="question hidden" id="question"></p>
+
+    <div class="dial-wrap">
+      <svg id="dial" viewBox="-4 -4 208 110" role="img" aria-label="Spectrum dial">
+        <defs>
+          <clipPath id="dialClip">
+            <path d="M5 100 A95 95 0 0 1 195 100 Z"/>
+          </clipPath>
+        </defs>
+        <path id="dialFace" class="dial-face" d="M5 100 A95 95 0 0 1 195 100 Z"/>
+        <g id="targetGroup" clip-path="url(#dialClip)"></g>
+        <g id="needleGroup" class="hidden">
+          <line id="needle" x1="100" y1="100" x2="100" y2="8" class="needle"/>
+          <circle cx="100" cy="100" r="6" class="needle-hub"/>
+        </g>
+        <g id="guessGhost" class="hidden"></g>
+      </svg>
+    </div>
+
+    <div class="spectrum">
+      <div class="label left" id="labelLeft">Left</div>
+      <svg class="arrow" viewBox="0 0 100 20" aria-hidden="true">
+        <path d="M8 10 H92 M16 3 L8 10 L16 17 M84 3 L92 10 L84 17" />
+      </svg>
+      <div class="label right" id="labelRight">Right</div>
+    </div>
+
+    <div class="actions" id="actions"></div>
+
+    <section class="scoreboard">
+      <p class="hint" id="scoreHint">Tap a name to rename. Use − / + to fix a score.</p>
+      <ul id="scoreList" class="score-list"></ul>
+      <div class="couple-stats hidden" id="coupleStats"></div>
+      <button type="button" class="btn btn-secondary btn-small hidden" id="btnAddTeamGame">+ Add Team</button>
+    </section>
+  </main>
+
+  <!-- ============ DIALOGS ============ -->
+  <dialog id="howToDialog" class="dialog">
+    <h2>How to Play</h2>
+    <ol>
+      <li>A spectrum shows up with two opposite ends, for example <b>Hot ↔ Cold</b>. Couples cards also ask a question, such as <i>“After an argument, I need…”</i>.</li>
+      <li>Only the <b>Psychic</b> looks at the screen while the target is placed:
+        <ul>
+          <li><b>Honest answer:</b> the Psychic drags the needle to where <i>they</i> really are on the spectrum.</li>
+          <li><b>Random target:</b> the game hides a target, and the Psychic gives a one-word clue, like “Coffee!” for Hot ↔ Cold.</li>
+        </ul>
+      </li>
+      <li>Tap <b>Hide for Guessers</b> and hand the device over.</li>
+      <li>Guessers drag the needle anywhere on the dial, then tap <b>Lock In Guess</b>.</li>
+      <li><b>Show / Hide Target</b> lets the Psychic re-check the target at any point without moving the round forward. Guessers look away!</li>
+      <li>In Teams mode with steal on, the next team guesses whether the target is <b>Left</b> or <b>Right</b> of the needle for 1 bonus point. No steal on a bull's-eye.</li>
+      <li>Scoring:
+        <ul>
+          <li><b class="z4t">4 points</b> bull's-eye (center)</li>
+          <li><b class="z3t">3 points</b> close</li>
+          <li><b class="z2t">2 points</b> near</li>
+          <li><b>0 points</b> miss</li>
+        </ul>
+      </li>
+      <li>Play goes on forever. Tap <b>New Game</b> to change modes, decks or players.</li>
+    </ol>
+    <form method="dialog"><button class="btn btn-primary">Got it!</button></form>
+  </dialog>
+
+  <dialog id="customDialog" class="dialog">
+    <h2>My Spectrums</h2>
+    <p class="hint">Saved on this device. Turn on the “My Spectrums” deck to play them.</p>
+    <form id="customForm" class="custom-form">
+      <input id="customQ" class="input" maxlength="120" placeholder="Question (optional) e.g. “On a lazy Sunday, I…”">
+      <div class="field-row">
+        <input id="customL" class="input" maxlength="40" placeholder="Left end" required>
+        <span>↔</span>
+        <input id="customR" class="input" maxlength="40" placeholder="Right end" required>
+      </div>
+      <button class="btn btn-primary btn-small" type="submit">Add Spectrum</button>
+    </form>
+    <ul id="customList" class="custom-list"></ul>
+    <form method="dialog"><button class="btn btn-secondary">Done</button></form>
+  </dialog>
+
+  <script src="js/decks.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
