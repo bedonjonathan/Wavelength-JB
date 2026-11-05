@@ -11,9 +11,9 @@
   const CX = 100, CY = 100, R = 95;
   const STORE = { prefs: "otsw.prefs", custom: "otsw.custom", theme: "otsw.theme" };
   const THEMES = [
-    ["system", "🖥️ System"], ["light", "☀️ Light"], ["dark", "🌙 Dark"], ["neon", "⚡ Neon"],
-    ["retro", "📻 Retro"], ["pastel", "🍬 Pastel"], ["halloween", "🎃 Halloween"],
-    ["winter", "🎄 Winter"], ["valentine", "💘 Valentine"],
+    ["system", "System"], ["light", "Light"], ["dark", "Dark"], ["neon", "Neon"],
+    ["retro", "Retro"], ["pastel", "Pastel"], ["halloween", "Halloween"],
+    ["winter", "Winter"], ["valentine", "Valentine"],
   ];
 
   // ---------- Storage helpers (never throw) ----------
@@ -43,22 +43,33 @@
 
   // ---------- State ----------
   const defaults = {
-    mode: "couple",
-    partners: ["Partner 1", "Partner 2"],
+    mode: "duo",
+    players: ["Player 1", "Player 2"],
     teams: ["Team 1", "Team 2"],
-    decks: ["couples-therapy", "couples-everyday"],
+    decks: ["deep-talk", "get-to-know", "just-us"],
     targetSource: "honest",
     timer: 0,
     steal: true,
   };
+  const MODE_DECKS = {
+    duo: ["deep-talk", "get-to-know", "just-us"],
+    teams: ["classic", "get-to-know", "food", "pop"],
+  };
   const prefs = Object.assign({}, defaults, load(STORE.prefs, {}));
+  // Migrate settings saved by earlier versions.
+  if (prefs.mode === "couple") prefs.mode = "duo";
+  if (Array.isArray(prefs.partners)) { prefs.players = prefs.partners; delete prefs.partners; }
+  prefs.players = (prefs.players || defaults.players).map((n, i) => (/^Partner [12]$/.test(n) ? `Player ${i + 1}` : n));
+  const RENAMED = { "couples-therapy": "deep-talk", "couples-everyday": "get-to-know" };
+  const hadOldDeep = (prefs.decks || []).includes("couples-therapy");
+  prefs.decks = [...new Set((prefs.decks || []).map((d) => RENAMED[d] || d).concat(hadOldDeep ? ["just-us"] : []))];
   let customCards = load(STORE.custom, []);
   if (!Array.isArray(customCards)) customCards = [];
 
   const game = {
     phase: "setup",       // setup | psychic | guess | steal | reveal
-    mode: "couple",
-    players: [],          // [{ name, score }] — partners (couple) or teams
+    mode: "duo",
+    players: [],          // [{ name, score }] — two players (duo) or teams
     turn: 0,              // index of current psychic (player/team)
     sharedScore: 0,
     stats: { rounds: 0, bulls: 0, streak: 0, bestStreak: 0 },
@@ -96,12 +107,12 @@
 
   function renderMode() {
     document.querySelectorAll(".seg").forEach((b) => b.classList.toggle("active", b.dataset.mode === prefs.mode));
-    const couple = prefs.mode === "couple";
-    $("coupleSetup").classList.toggle("hidden", !couple);
-    $("teamsSetup").classList.toggle("hidden", couple);
-    $("stealSetting").classList.toggle("hidden", couple);
-    $("modeHint").textContent = couple
-      ? "Two partners take turns being the Psychic and score together. How in sync are you?"
+    const duo = prefs.mode === "duo";
+    $("duoSetup").classList.toggle("hidden", !duo);
+    $("teamsSetup").classList.toggle("hidden", duo);
+    $("stealSetting").classList.toggle("hidden", duo);
+    $("modeHint").textContent = duo
+      ? "Two players take turns being the Psychic and build one shared score."
       : "Teams take turns. The Psychic's own team guesses, and each team keeps its own score.";
   }
 
@@ -114,7 +125,7 @@
       const del = el("button", {
         type: "button", class: "icon-btn", "aria-label": "Remove team", disabled: setupTeams.length <= 2,
         onclick: () => { setupTeams.splice(i, 1); renderSetupTeams(); },
-      }, "🗑");
+      }, "✕");
       list.append(el("li", {}, input, del));
     });
   }
@@ -122,21 +133,21 @@
   function renderDeckList() {
     const list = $("deckList");
     list.replaceChildren();
-    const decks = [...window.DECKS, { id: "custom", name: "✏️ My Spectrums", blurb: `${customCards.length} saved on this device`, cards: customCards }];
+    const decks = [...window.DECKS, { id: "custom", name: "My Spectrums", blurb: `${customCards.length} saved on this device`, cards: customCards }];
     decks.forEach((d) => {
       const cb = el("input", { type: "checkbox", value: d.id, checked: prefs.decks.includes(d.id) });
       cb.addEventListener("change", () => {
         prefs.decks = cb.checked ? [...new Set([...prefs.decks, d.id])] : prefs.decks.filter((x) => x !== d.id);
       });
-      list.append(el("label", { class: "deck" + (d.featured ? " featured" : "") }, cb,
+      list.append(el("label", { class: "deck" }, cb,
         el("span", {}, el("b", {}, d.name), el("small", {}, `${d.blurb} · ${d.cards.length} cards`))));
     });
     $("customCount").textContent = customCards.length;
   }
 
   function initSetup() {
-    $("partnerA").value = prefs.partners[0] || "";
-    $("partnerB").value = prefs.partners[1] || "";
+    $("playerA").value = prefs.players[0] || "";
+    $("playerB").value = prefs.players[1] || "";
     $("targetSource").value = prefs.targetSource;
     $("timerSelect").value = String(prefs.timer);
     $("stealToggle").checked = !!prefs.steal;
@@ -145,9 +156,11 @@
       if (prefs.mode === b.dataset.mode) return;
       prefs.mode = b.dataset.mode;
       // Sensible default target source per mode (still changeable).
-      prefs.targetSource = prefs.mode === "couple" ? "honest" : "random";
+      prefs.targetSource = prefs.mode === "duo" ? "honest" : "random";
       $("targetSource").value = prefs.targetSource;
+      prefs.decks = [...MODE_DECKS[prefs.mode], ...(prefs.decks.includes("custom") ? ["custom"] : [])];
       renderMode();
+      renderDeckList();
     }));
     $("btnAddTeamSetup").addEventListener("click", () => {
       setupTeams.push(`Team ${setupTeams.length + 1}`);
@@ -160,7 +173,7 @@
   }
 
   function readSetup() {
-    prefs.partners = [$("partnerA").value.trim() || "Partner 1", $("partnerB").value.trim() || "Partner 2"];
+    prefs.players = [$("playerA").value.trim() || "Player 1", $("playerB").value.trim() || "Player 2"];
     prefs.teams = setupTeams.map((t, i) => t.trim() || `Team ${i + 1}`);
     prefs.targetSource = $("targetSource").value;
     prefs.timer = Number($("timerSelect").value) || 0;
@@ -179,7 +192,7 @@
         el("button", {
           type: "button", class: "icon-btn", "aria-label": "Delete spectrum",
           onclick: () => { customCards.splice(i, 1); save(STORE.custom, customCards); renderCustomList(); renderDeckList(); },
-        }, "🗑")));
+        }, "✕")));
     });
   }
   function initCustom() {
@@ -225,7 +238,7 @@
     const pool = buildPool();
     if (!pool.length) { alert("Pick at least one deck that has spectrums in it."); return; }
     game.mode = prefs.mode;
-    game.players = (game.mode === "couple" ? prefs.partners : prefs.teams).map((name) => ({ name, score: 0 }));
+    game.players = (game.mode === "duo" ? prefs.players : prefs.teams).map((name) => ({ name, score: 0 }));
     game.turn = 0;
     game.sharedScore = 0;
     game.stats = { rounds: 0, bulls: 0, streak: 0, bestStreak: 0 };
@@ -292,7 +305,7 @@
     game.stats.streak = pts > 0 ? game.stats.streak + 1 : 0;
     game.stats.bestStreak = Math.max(game.stats.bestStreak, game.stats.streak);
 
-    if (game.mode === "couple") game.sharedScore += pts;
+    if (game.mode === "duo") game.sharedScore += pts;
     else game.players[game.turn].score += pts;
 
     const si = stealTeamIndex();
@@ -336,13 +349,13 @@
     t.classList.remove("hidden");
     t.classList.toggle("low", left <= 10);
     if (left === 0) {
-      t.textContent = "⏰ Time's up! Lock it in!";
+      t.textContent = "Time's up! Lock it in!";
       clearInterval(game.timerId);
       game.timerId = null;
       try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch { /* ignore */ }
       return;
     }
-    t.textContent = `⏱ ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+    t.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
   }
 
   // ---------- Dial geometry ----------
@@ -422,13 +435,13 @@
   }
   function toggleBtn() {
     const on = game.targetVisible;
-    return btn(on ? "🙈 Hide Target" : "👁 Show Target (Psychic only)", "btn-toggle" + (on ? " on" : ""), toggleTarget,
+    return btn(on ? "Hide Target" : "Show Target (Psychic only)", "btn-toggle" + (on ? " on" : ""), toggleTarget,
       { "aria-pressed": on ? "true" : "false" });
   }
 
   function psychicName() { return game.players[game.turn].name; }
   function guesserName() {
-    if (game.mode === "couple") return game.players[(game.turn + 1) % game.players.length].name;
+    if (game.mode === "duo") return game.players[(game.turn + 1) % game.players.length].name;
     return game.players[game.turn].name;
   }
 
@@ -440,10 +453,10 @@
   }
 
   const REACTIONS = {
-    4: ["Perfectly on the same wave! 🌊", "Bull's-eye! Mind reader. 🎯", "Totally in sync! ✨"],
-    3: ["So close! 💫", "Nearly read their mind!", "Great connection!"],
-    2: ["In the neighborhood. 🏡", "Warm, getting there!", "Partly tuned in."],
-    0: ["Different wavelengths this time. 📡", "Missed! Ask what they meant.", "Way off, but now you know more!"],
+    4: ["Bull's-eye!", "Perfectly in sync.", "Mind reader."],
+    3: ["So close!", "Nearly read their mind.", "Great guess."],
+    2: ["In the neighborhood.", "Warm, getting there.", "Partly tuned in."],
+    0: ["Missed this time.", "Way off. Ask what they meant.", "Different wavelengths."],
   };
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
@@ -496,18 +509,18 @@
       drawNeedle(true);
     } else if (phase === "reveal") {
       const pts = game.lastPoints;
-      setPill("🏆", "POINTS AWARDED", game.mode === "couple" ? "Together" : psychicName());
+      setPill("🏆", "POINTS AWARDED", game.mode === "duo" ? "Shared score" : psychicName());
       $("instructions").classList.add("hidden");
       const res = $("result");
       res.replaceChildren();
-      const head = game.mode === "couple" ? `+${pts} point${pts === 1 ? "" : "s"} together!` : `${psychicName()} scored ${pts} point${pts === 1 ? "" : "s"}!`;
+      const head = game.mode === "duo" ? `+${pts} point${pts === 1 ? "" : "s"}!` : `${psychicName()} scored ${pts} point${pts === 1 ? "" : "s"}!`;
       res.append(head, el("small", {}, pick(REACTIONS[pts])));
       if (game.lastSteal) {
         const s = game.lastSteal;
-        res.append(el("small", {}, s.bull ? `Bull's-eye, so no steal for ${s.team}.` : s.correct ? `${s.team} stole 1 point! 🕵️` : `${s.team}'s steal missed.`));
+        res.append(el("small", {}, s.bull ? `Bull's-eye, so no steal for ${s.team}.` : s.correct ? `${s.team} stole 1 point!` : `${s.team}'s steal missed.`));
       }
       res.classList.remove("hidden");
-      actions.append(btn("Next Round ➜", "btn-primary btn-wide", nextRound));
+      actions.append(btn("Next Round", "btn-primary btn-wide", nextRound));
       drawNeedle(true);
     }
 
@@ -518,7 +531,7 @@
   function renderScores() {
     const list = $("scoreList");
     list.replaceChildren();
-    const couple = game.mode === "couple";
+    const duo = game.mode === "duo";
     const rename = (p) => () => {
       const name = prompt("Rename", p.name);
       if (name && name.trim()) { p.name = name.trim().slice(0, 24); render(); }
@@ -528,41 +541,41 @@
       const active = i === game.turn;
       const nameBtn = el("button", { type: "button", class: "team-name", onclick: rename(p) }, p.name);
       let middle, right;
-      if (couple) {
-        middle = el("span", { class: "hint", style: "margin:0" }, active ? "🔮 Psychic" : "🤔 Guesser");
+      if (duo) {
+        middle = el("span", { class: "hint", style: "margin:0" }, active ? "Psychic" : "Guesser");
         right = el("span");
       } else {
-        middle = el("span", { class: "score" }, `⭐ ${p.score}`);
+        middle = el("span", { class: "score" }, String(p.score));
         right = el("span", { class: "score-adjust" },
           el("button", { type: "button", class: "icon-btn", "aria-label": `Minus 1 for ${p.name}`, onclick: () => { p.score--; renderScores(); } }, "−"),
           el("button", { type: "button", class: "icon-btn", "aria-label": `Plus 1 for ${p.name}`, onclick: () => { p.score++; renderScores(); } }, "+"),
           el("button", {
             type: "button", class: "icon-btn", "aria-label": `Delete ${p.name}`, disabled: game.players.length <= 2,
             onclick: () => deleteTeam(i),
-          }, "🗑"));
+          }, "✕"));
       }
       list.append(el("li", { class: active ? "active" : "" }, nameBtn, middle, right));
     });
 
-    if (couple) {
+    if (duo) {
       list.append(el("li", {},
-        el("span", { class: "team-name", style: "cursor:default" }, "💞 Together"),
-        el("span", { class: "score" }, `⭐ ${game.sharedScore}`),
+        el("span", { class: "team-name", style: "cursor:default" }, "Shared score"),
+        el("span", { class: "score" }, String(game.sharedScore)),
         el("span", { class: "score-adjust" },
           el("button", { type: "button", class: "icon-btn", "aria-label": "Minus 1", onclick: () => { game.sharedScore--; renderScores(); } }, "−"),
           el("button", { type: "button", class: "icon-btn", "aria-label": "Plus 1", onclick: () => { game.sharedScore++; renderScores(); } }, "+"))));
       const s = game.stats;
       const avg = s.rounds ? (game.sharedScore / s.rounds).toFixed(1) : "–";
-      const stats = $("coupleStats");
+      const stats = $("duoStats");
       stats.replaceChildren(
         el("span", {}, "Rounds ", el("b", {}, String(s.rounds))),
         el("span", {}, "Bull's-eyes ", el("b", {}, String(s.bulls))),
         el("span", {}, "Avg ", el("b", {}, avg)),
         el("span", {}, "Best streak ", el("b", {}, String(s.bestStreak))));
     }
-    $("coupleStats").classList.toggle("hidden", !couple);
-    $("btnAddTeamGame").classList.toggle("hidden", couple);
-    $("scoreHint").textContent = couple ? "Tap a name to rename." : "Tap a team name to rename. Use − / + to fix a score.";
+    $("duoStats").classList.toggle("hidden", !duo);
+    $("btnAddTeamGame").classList.toggle("hidden", duo);
+    $("scoreHint").textContent = duo ? "Tap a name to rename." : "Tap a team name to rename. Use − / + to fix a score.";
   }
 
   function deleteTeam(i) {
@@ -584,9 +597,9 @@
       stopTimer();
       game.phase = "setup";
       setupTeams = game.mode === "teams" ? game.players.map((p) => p.name) : setupTeams;
-      if (game.mode === "couple" && game.players.length === 2) {
-        $("partnerA").value = game.players[0].name;
-        $("partnerB").value = game.players[1].name;
+      if (game.mode === "duo" && game.players.length === 2) {
+        $("playerA").value = game.players[0].name;
+        $("playerB").value = game.players[1].name;
       }
       renderSetupTeams();
       renderDeckList();

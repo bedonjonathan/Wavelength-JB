@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>On the Same Wave</title>
-  <meta name="description" content="A pass-and-play spectrum guessing game for couples, friends and parties.">
+  <meta name="description" content="A pass-and-play spectrum guessing game.">
   <meta name="theme-color" content="#5b6cff">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -22,18 +22,18 @@
     <section class="card">
       <h2>Game mode</h2>
       <div class="segmented" role="radiogroup" aria-label="Game mode">
-        <button type="button" data-mode="couple" class="seg active">💞 Couple</button>
-        <button type="button" data-mode="teams" class="seg">👥 Teams</button>
+        <button type="button" data-mode="duo" class="seg active">Duo</button>
+        <button type="button" data-mode="teams" class="seg">Teams</button>
       </div>
       <p class="hint" id="modeHint"></p>
     </section>
 
-    <section class="card" id="coupleSetup">
-      <h2>Partners</h2>
+    <section class="card" id="duoSetup">
+      <h2>Players</h2>
       <div class="field-row">
-        <input id="partnerA" class="input" maxlength="24" placeholder="Partner 1" autocomplete="off">
-        <span class="heart">♥</span>
-        <input id="partnerB" class="input" maxlength="24" placeholder="Partner 2" autocomplete="off">
+        <input id="playerA" class="input" maxlength="24" placeholder="Player 1" autocomplete="off">
+        <span class="vs">&amp;</span>
+        <input id="playerB" class="input" maxlength="24" placeholder="Player 2" autocomplete="off">
       </div>
     </section>
 
@@ -46,7 +46,7 @@
     <section class="card">
       <h2>Spectrum decks</h2>
       <div id="deckList" class="deck-list"></div>
-      <button type="button" class="btn btn-secondary btn-small" id="btnCustom">✏️ My Spectrums (<span id="customCount">0</span>)</button>
+      <button type="button" class="btn btn-secondary btn-small" id="btnCustom">My Spectrums (<span id="customCount">0</span>)</button>
     </section>
 
     <section class="card">
@@ -74,7 +74,7 @@
       </label>
     </section>
 
-    <button type="button" class="btn btn-primary btn-big" id="btnStart">Start Playing 🌊</button>
+    <button type="button" class="btn btn-primary btn-big" id="btnStart">Start Playing</button>
   </main>
 
   <!-- ============ GAME ============ -->
@@ -89,7 +89,7 @@
     <p class="timer hidden" id="timer" aria-live="polite"></p>
     <p class="result hidden" id="result"></p>
 
-    <div class="peek-warning hidden" id="peekWarning">👀 Target is showing — guessers, look away!</div>
+    <div class="peek-warning hidden" id="peekWarning">Target is showing. Guessers, look away!</div>
 
     <p class="question hidden" id="question"></p>
 
@@ -123,7 +123,7 @@
     <section class="scoreboard">
       <p class="hint" id="scoreHint">Tap a name to rename. Use − / + to fix a score.</p>
       <ul id="scoreList" class="score-list"></ul>
-      <div class="couple-stats hidden" id="coupleStats"></div>
+      <div class="duo-stats hidden" id="duoStats"></div>
       <button type="button" class="btn btn-secondary btn-small hidden" id="btnAddTeamGame">+ Add Team</button>
     </section>
   </main>
@@ -132,7 +132,7 @@
   <dialog id="howToDialog" class="dialog">
     <h2>How to Play</h2>
     <ol>
-      <li>A spectrum shows up with two opposite ends, for example <b>Hot ↔ Cold</b>. Couples cards also ask a question, such as <i>“After an argument, I need…”</i>.</li>
+      <li>A spectrum shows up with two opposite ends, for example <b>Hot ↔ Cold</b>. Some cards also ask a question, such as <i>“My ideal Friday night”</i>.</li>
       <li>Only the <b>Psychic</b> looks at the screen while the target is placed:
         <ul>
           <li><b>Honest answer:</b> the Psychic drags the needle to where <i>they</i> really are on the spectrum.</li>
@@ -160,7 +160,7 @@
     <h2>My Spectrums</h2>
     <p class="hint">Saved on this device. Turn on the “My Spectrums” deck to play them.</p>
     <form id="customForm" class="custom-form">
-      <input id="customQ" class="input" maxlength="120" placeholder="Question (optional) e.g. “On a lazy Sunday, I…”">
+      <input id="customQ" class="input" maxlength="120" placeholder="Question (optional) e.g. “My ideal Friday night”">
       <div class="field-row">
         <input id="customL" class="input" maxlength="40" placeholder="Left end" required>
         <span>↔</span>
