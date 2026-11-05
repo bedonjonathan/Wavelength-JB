@@ -9,7 +9,7 @@
     { half: 12.5, points: 2, cls: "z2" },
   ];
   const CX = 100, CY = 100, R = 95;
-  const STORE = { prefs: "otsw.prefs", custom: "otsw.custom", theme: "otsw.theme" };
+  const STORE = { prefs: "otsw.prefs", custom: "otsw.custom", theme: "otsw.theme", room: "otsw.room" };
   const THEMES = [
     ["system", "System"], ["light", "Light"], ["dark", "Dark"], ["neon", "Neon"],
     ["retro", "Retro"], ["pastel", "Pastel"], ["halloween", "Halloween"],
@@ -80,9 +80,17 @@
     stealGuess: null,
     lastPoints: 0,
     lastSteal: null,
-    pool: [], poolPos: 0,
+    cards: [], order: [], poolPos: 0,
+    settings: { targetSource: "honest", timer: 0, steal: true },
+    reaction: 0,
+    rev: 0,
     timerId: null, timerEnd: 0,
   };
+
+  // Remote-play connection (inactive for pass-and-play).
+  const net = { active: false, t: null, code: null, seat: null, online: {}, peekHidden: false, lastJson: "", needleTimer: null };
+  const SYNCED = ["phase", "mode", "players", "turn", "sharedScore", "stats", "card", "target", "needle",
+    "stealGuess", "lastPoints", "lastSteal", "order", "poolPos", "settings", "reaction"];
 
   // ---------- Theme ----------
   const mql = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
@@ -111,6 +119,7 @@
     $("duoSetup").classList.toggle("hidden", !duo);
     $("teamsSetup").classList.toggle("hidden", duo);
     $("stealSetting").classList.toggle("hidden", duo);
+    $("remoteSetup").classList.toggle("hidden", !duo || $("remoteSetup").dataset.off === "1");
     $("modeHint").textContent = duo
       ? "Two players take turns being the Psychic and build one shared score."
       : "Teams take turns. The Psychic's own team guesses, and each team keeps its own score.";
@@ -223,30 +232,44 @@
     return a;
   }
   function drawCard() {
-    if (game.poolPos >= game.pool.length) {
-      const last = game.card;
-      shuffle(game.pool);
-      if (game.pool.length > 1 && game.pool[0] === last) game.pool.push(game.pool.shift());
+    const order = game.order;
+    if (game.poolPos >= order.length) {
+      const last = order[order.length - 1];
+      shuffle(order);
+      if (order.length > 1 && order[0] === last) order.push(order.shift());
       game.poolPos = 0;
     }
-    return game.pool[game.poolPos++];
+    return game.cards[order[game.poolPos++]];
   }
 
   // ---------- Game flow ----------
-  function startGame() {
+  // Sets up a fresh game from the setup screen. Returns false if no cards are selected.
+  function initGame(names) {
     readSetup();
     const pool = buildPool();
-    if (!pool.length) { alert("Pick at least one deck that has spectrums in it."); return; }
+    if (!pool.length) { alert("Pick at least one deck that has spectrums in it."); return false; }
     game.mode = prefs.mode;
-    game.players = (game.mode === "duo" ? prefs.players : prefs.teams).map((name) => ({ name, score: 0 }));
+    game.players = names.map((name) => ({ name, score: 0 }));
     game.turn = 0;
     game.sharedScore = 0;
     game.stats = { rounds: 0, bulls: 0, streak: 0, bestStreak: 0 };
-    game.pool = shuffle([...pool]);
+    game.cards = pool;
+    game.order = shuffle(pool.map((_, i) => i));
     game.poolPos = 0;
     game.card = null;
-    $("setupScreen").classList.add("hidden");
-    $("gameScreen").classList.remove("hidden");
+    game.rev = 0;
+    game.settings = { targetSource: prefs.targetSource, timer: prefs.timer, steal: prefs.steal };
+    return true;
+  }
+
+  function showScreen(id) {
+    ["setupScreen", "lobbyScreen", "gameScreen"].forEach((s) => $(s).classList.toggle("hidden", s !== id));
+  }
+
+  function startGame() {
+    readSetup();
+    if (!initGame(prefs.mode === "duo" ? prefs.players : prefs.teams)) return;
+    showScreen("gameScreen");
     newRound();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -256,39 +279,41 @@
   function newRound() {
     stopTimer();
     game.card = drawCard();
-    game.target = prefs.targetSource === "honest" ? 50 : randomTarget();
+    game.target = game.settings.targetSource === "honest" ? 50 : randomTarget();
     game.needle = 50;
     game.targetVisible = true;
     game.stealGuess = null;
     game.lastSteal = null;
     game.phase = "psychic";
-    render();
+    net.peekHidden = false;
+    update();
   }
 
   function skipQuestion() {
     game.card = drawCard();
-    if (prefs.targetSource !== "honest") game.target = randomTarget();
-    render();
+    if (game.settings.targetSource !== "honest") game.target = randomTarget();
+    else game.target = 50;
+    update();
   }
 
   function hideForGuessers() {
-    if (prefs.targetSource === "honest") game.target = game.needle;
+    if (game.settings.targetSource === "honest") game.target = game.needle;
     game.needle = 50;
     game.targetVisible = false;
     game.phase = "guess";
     startTimer();
-    render();
+    update();
   }
 
   function stealTeamIndex() {
-    if (game.mode !== "teams" || !prefs.steal || game.players.length < 2) return -1;
+    if (game.mode !== "teams" || !game.settings.steal || game.players.length < 2) return -1;
     return (game.turn + 1) % game.players.length;
   }
 
   function lockGuess() {
     stopTimer();
     game.targetVisible = false;
-    if (stealTeamIndex() >= 0) { game.phase = "steal"; render(); }
+    if (stealTeamIndex() >= 0) { game.phase = "steal"; update(); }
     else reveal();
   }
 
@@ -316,8 +341,9 @@
       game.lastSteal = { team: game.players[si].name, correct, bull: pts === 4 };
     }
     game.targetVisible = true;
+    game.reaction = Math.floor(Math.random() * 3);
     game.phase = "reveal";
-    render();
+    update();
   }
 
   function nextRound() {
@@ -326,15 +352,253 @@
   }
 
   function toggleTarget() {
-    game.targetVisible = !game.targetVisible;
+    if (net.active) net.peekHidden = !net.peekHidden;
+    else game.targetVisible = !game.targetVisible;
     render();
+  }
+
+  // Render, and in remote play also send the new state to the other device.
+  function update() {
+    if (net.active) {
+      game.rev++;
+      const snap = snapshot();
+      net.lastJson = JSON.stringify(snap);
+      net.t.setState(snap);
+    }
+    render();
+  }
+
+  // ---------- Remote play ----------
+  function snapshot() {
+    const o = { rev: game.rev };
+    SYNCED.forEach((k) => { o[k] = game[k]; });
+    return JSON.parse(JSON.stringify(o)); // drops undefined values, which Firebase rejects
+  }
+
+  function iAmPsychic() { return !net.active || net.seat === game.turn; }
+  function iAmGuesser() { return !net.active || net.seat !== game.turn; }
+  function targetShown() {
+    if (!net.active) return game.targetVisible;
+    if (game.phase === "reveal") return true;
+    return iAmPsychic() && !net.peekHidden;
+  }
+
+  function applySnapshot(s) {
+    if (!s || (s.rev || 0) < game.rev) return;
+    const json = JSON.stringify(s);
+    if (json === net.lastJson) return; // our own write echoing back
+    net.lastJson = json;
+    const prevPhase = game.phase, prevTurn = game.turn, prevRev = game.rev;
+    SYNCED.forEach((k) => { if (k in s) game[k] = s[k]; });
+    game.rev = s.rev || 0;
+    game.stealGuess = s.stealGuess || null;
+    game.lastSteal = s.lastSteal || null;
+    game.players = Object.values(s.players || {}).map((p) => ({ name: p.name || "", score: p.score || 0 }));
+    game.order = Object.values(s.order || {});
+    if (game.phase !== prevPhase || game.turn !== prevTurn || game.rev < prevRev) {
+      if (game.phase === "guess") startTimer(); else stopTimer();
+      if (game.phase === "psychic") net.peekHidden = false;
+    }
+    // The host starts the game as soon as the second player arrives.
+    if (game.phase === "lobby" && net.seat === 0 && game.players[1] && game.players[1].name) {
+      newRound();
+      return;
+    }
+    render();
+  }
+
+  const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  function makeCode() {
+    let c = "";
+    for (let i = 0; i < 4; i++) c += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+    return c;
+  }
+
+  function remoteError(msg) {
+    const e = $("remoteError");
+    e.textContent = msg || "";
+    e.classList.toggle("hidden", !msg);
+  }
+
+  function setRemoteBusy(busy) {
+    ["btnCreateRoom", "btnJoinRoom", "btnRejoin"].forEach((id) => { $(id).disabled = busy; });
+  }
+
+  async function createRoom() {
+    remoteError("");
+    const name = $("remoteName").value.trim() || "Player 1";
+    readSetup();
+    if (!initGame([name, ""])) return;
+    setRemoteBusy(true);
+    try {
+      const t = await window.Net.connect();
+      let code = makeCode();
+      for (let i = 0; i < 5 && (await t.exists(code)); i++) code = makeCode();
+      game.phase = "lobby";
+      await t.create(code, { cards: game.cards, state: snapshot(), created: Date.now() });
+      enterRoom(t, code, 0);
+    } catch (err) {
+      remoteError(`Couldn't create a room. ${err && err.message ? err.message : ""}`);
+    } finally {
+      setRemoteBusy(false);
+    }
+  }
+
+  async function joinRoom(code, name, savedSeat) {
+    remoteError("");
+    code = (code || "").trim().toUpperCase();
+    if (!/^[A-Z2-9]{4}$/.test(code)) { remoteError("Enter the 4-character room code."); return; }
+    setRemoteBusy(true);
+    try {
+      const t = await window.Net.connect();
+      const room = await t.read(code);
+      if (!room || !room.state) { remoteError("No room with that code. Check it and try again."); return; }
+      const players = Object.values(room.state.players || {});
+      const same = (a, b) => (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
+      let seat = savedSeat;
+      let claim = false;
+      if (seat == null) {
+        if (!players[1] || !players[1].name) { seat = 1; claim = true; }
+        else if (same(players[1].name, name)) seat = 1;
+        else if (same(players[0] && players[0].name, name)) seat = 0;
+        else { remoteError("That room already has two players. To rejoin, use the same name you joined with."); return; }
+      }
+      game.cards = Object.values(room.cards || {});
+      game.rev = -1;
+      net.lastJson = "";
+      applyRoomState(room.state);
+      if (claim) game.players[1].name = name && !same(name, game.players[0].name) ? name : "Player 2";
+      enterRoom(t, code, seat);
+      if (claim) update();
+    } catch (err) {
+      remoteError(`Couldn't join. ${err && err.message ? err.message : ""}`);
+    } finally {
+      setRemoteBusy(false);
+    }
+  }
+
+  // Load state directly (used on join, before listeners are attached).
+  function applyRoomState(s) {
+    net.active = false; // don't start the host's auto-start logic yet
+    SYNCED.forEach((k) => { if (k in s) game[k] = s[k]; });
+    game.rev = s.rev || 0;
+    game.stealGuess = s.stealGuess || null;
+    game.lastSteal = s.lastSteal || null;
+    game.players = Object.values(s.players || {}).map((p) => ({ name: p.name || "", score: p.score || 0 }));
+    while (game.players.length < 2) game.players.push({ name: "", score: 0 });
+    game.order = Object.values(s.order || {});
+  }
+
+  function enterRoom(t, code, seat) {
+    Object.assign(net, { active: true, t, code, seat, online: {}, peekHidden: false });
+    net.lastJson = JSON.stringify(snapshot());
+    save(STORE.room, { code, seat, name: (game.players[seat] || {}).name || "" });
+    t.open(code);
+    t.onState(applySnapshot);
+    t.onNeedle((v) => {
+      if (game.phase === "guess" && !iAmGuesser() && typeof v === "number") { game.needle = v; drawNeedle(true); }
+    });
+    t.setPresence(seat);
+    t.onPresence((o) => { net.online = o || {}; renderRoomBar(); });
+    if (game.phase === "guess") startTimer();
+    if (game.phase === "lobby" && seat === 0 && game.players[1] && game.players[1].name) { newRound(); return; }
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // forget=true also drops the saved room, so "Rejoin" disappears.
+  function leaveRoom(forget) {
+    if (net.t) net.t.leave();
+    stopTimer();
+    Object.assign(net, { active: false, t: null, code: null, seat: null, online: {} });
+    if (forget) save(STORE.room, null);
+    $("roomBar").classList.add("hidden");
+    renderRejoin();
+  }
+
+  function renderRejoin() {
+    const saved = load(STORE.room, null);
+    const b = $("btnRejoin");
+    b.classList.toggle("hidden", !(saved && saved.code));
+    if (saved && saved.code) b.textContent = `Rejoin room ${saved.code}`;
+  }
+
+  function inviteLink() {
+    const u = new URL(location.href);
+    u.search = "";
+    if (new URLSearchParams(location.search).get("net") === "local") u.searchParams.set("net", "local");
+    u.searchParams.set("room", net.code);
+    return u.toString();
+  }
+
+  async function shareInvite() {
+    const url = inviteLink();
+    try {
+      if (navigator.share) { await navigator.share({ title: "On the Same Wave", text: `Join my game. Room code ${net.code}`, url }); return; }
+      await navigator.clipboard.writeText(url);
+      $("shareNote").textContent = "Link copied.";
+    } catch {
+      $("shareNote").textContent = url;
+    }
+  }
+
+  function renderLobby() {
+    $("lobbyCode").textContent = net.code;
+    const other = game.players[1 - net.seat];
+    $("lobbyStatus").textContent = net.seat === 0
+      ? "Waiting for the other player to join…"
+      : `Joined. Waiting for ${other && other.name ? other.name : "the host"} to start…`;
+  }
+
+  function renderRoomBar() {
+    const bar = $("roomBar");
+    if (!net.active) { bar.classList.add("hidden"); return; }
+    const other = game.players[1 - net.seat];
+    const known = net.t && net.t.kind === "firebase";
+    const on = !!(net.online && net.online[1 - net.seat]);
+    bar.replaceChildren(...[
+      el("span", {}, "Room ", el("b", {}, net.code)),
+      el("span", {}, "·"),
+      el("span", {}, `You're ${(game.players[net.seat] || {}).name || "playing"}`),
+      other && other.name && known ? el("span", {}, "·") : null,
+      other && other.name && known ? el("span", {}, el("i", { class: "dot" + (on ? "" : " off") }), `${other.name} ${on ? "online" : "offline"}`) : null,
+    ].filter(Boolean));
+    bar.classList.remove("hidden");
+  }
+
+  function initRemote() {
+    if (!window.Net || !window.Net.available()) {
+      // Remote play isn't configured: hide it entirely and keep the plain start button.
+      $("remoteSetup").dataset.off = "1";
+      $("remoteSetup").classList.add("hidden");
+      $("btnStart").textContent = "Start Playing";
+      return;
+    }
+    $("remoteName").value = prefs.remoteName || "";
+    $("remoteName").addEventListener("change", () => { prefs.remoteName = $("remoteName").value.trim(); save(STORE.prefs, prefs); });
+    $("btnCreateRoom").addEventListener("click", createRoom);
+    $("btnJoinRoom").addEventListener("click", () => joinRoom($("roomCodeInput").value, $("remoteName").value.trim()));
+    $("roomCodeInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("btnJoinRoom").click(); });
+    $("btnShare").addEventListener("click", shareInvite);
+    $("btnLeaveLobby").addEventListener("click", () => { leaveRoom(true); game.phase = "setup"; showScreen("setupScreen"); });
+    $("btnRejoin").addEventListener("click", () => {
+      const saved = load(STORE.room, null);
+      if (saved && saved.code) joinRoom(saved.code, saved.name, saved.seat);
+    });
+    renderRejoin();
+    const fromLink = new URLSearchParams(location.search).get("room");
+    if (fromLink) {
+      if (prefs.mode !== "duo") document.querySelector('.seg[data-mode="duo"]').click();
+      $("roomCodeInput").value = fromLink.toUpperCase().slice(0, 4);
+      setTimeout(() => $("remoteSetup").scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+    }
   }
 
   // ---------- Timer ----------
   function startTimer() {
     stopTimer();
-    if (!prefs.timer) return;
-    game.timerEnd = Date.now() + prefs.timer * 1000;
+    if (!game.settings.timer) return;
+    game.timerEnd = Date.now() + game.settings.timer * 1000;
     game.timerId = setInterval(tickTimer, 250);
     tickTimer();
   }
@@ -370,7 +634,7 @@
   function drawTarget() {
     const g = $("targetGroup");
     g.replaceChildren();
-    if (!game.targetVisible) return;
+    if (!targetShown()) return;
     const t = game.target;
     // Outermost first so inner zones paint on top.
     [...ZONES].reverse().forEach((z, idx, arr) => {
@@ -397,7 +661,8 @@
   }
 
   function canDrag() {
-    return game.phase === "guess" || (game.phase === "psychic" && prefs.targetSource === "honest");
+    if (game.phase === "guess") return iAmGuesser();
+    return game.phase === "psychic" && game.settings.targetSource === "honest" && iAmPsychic();
   }
 
   function initDial() {
@@ -415,6 +680,9 @@
       if (game.phase === "psychic") game.target = game.needle;
       drawNeedle(game.phase !== "psychic");
       if (game.phase === "psychic") drawTarget();
+      if (net.active && game.phase === "guess" && !net.needleTimer) {
+        net.needleTimer = setTimeout(() => { net.needleTimer = null; net.t.setNeedle(game.needle); }, 80);
+      }
     };
     svg.addEventListener("pointerdown", (e) => {
       if (!canDrag()) return;
@@ -434,7 +702,11 @@
     return el("button", Object.assign({ type: "button", class: `btn ${cls}`, onclick }, extra), label);
   }
   function toggleBtn() {
-    const on = game.targetVisible;
+    const on = targetShown();
+    if (net.active) {
+      return btn(on ? "Hide target on my screen" : "Show target on my screen", "btn-toggle" + (on ? " on" : ""), toggleTarget,
+        { "aria-pressed": on ? "true" : "false" });
+    }
     return btn(on ? "Hide Target" : "Show Target (Psychic only)", "btn-toggle" + (on ? " on" : ""), toggleTarget,
       { "aria-pressed": on ? "true" : "false" });
   }
@@ -458,12 +730,15 @@
     2: ["In the neighborhood.", "Warm, getting there.", "Partly tuned in."],
     0: ["Missed this time.", "Way off. Ask what they meant.", "Different wavelengths."],
   };
-  const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
   function render() {
     if (game.phase === "setup") return;
+    if (net.active && game.phase === "lobby") { showScreen("lobbyScreen"); renderLobby(); return; }
+    showScreen("gameScreen");
+    renderRoomBar();
     const { card, phase } = game;
-    const honest = prefs.targetSource === "honest";
+    const honest = game.settings.targetSource === "honest";
+    const remote = net.active;
     const actions = $("actions");
     actions.replaceChildren();
 
@@ -473,13 +748,41 @@
     $("question").classList.toggle("hidden", !card.q);
     $("result").classList.add("hidden");
     $("instructions").classList.remove("hidden");
-    $("dialFace").classList.toggle("revealed", game.targetVisible);
+    $("dialFace").classList.toggle("revealed", targetShown());
     $("dial").classList.toggle("draggable", canDrag());
 
-    const peeking = game.targetVisible && (phase === "guess" || phase === "steal");
+    const peeking = !remote && game.targetVisible && (phase === "guess" || phase === "steal");
     $("peekWarning").classList.toggle("hidden", !peeking);
 
-    if (phase === "psychic") {
+    if (remote && phase === "psychic" && !iAmPsychic()) {
+      setPill("🔮", "PSYCHIC TURN", psychicName());
+      $("instructions").textContent = honest
+        ? `${psychicName()} is placing their answer. Your turn to guess is next.`
+        : `${psychicName()} is thinking of a clue. Your turn to guess is next.`;
+      drawNeedle(false);
+    } else if (remote && phase === "psychic") {
+      setPill("🔮", "YOUR TURN", psychicName());
+      $("instructions").textContent = honest
+        ? `Drag on the dial to set your honest answer, then send it to ${guesserName()}.`
+        : `Think of a clue that points to the target and say it out loud, then tap “Send to ${guesserName()}”.`;
+      actions.append(
+        btn(`Send to ${guesserName()}`, "btn-primary", hideForGuessers),
+        btn("Skip Question", "btn-secondary", skipQuestion),
+      );
+      drawNeedle(false);
+    } else if (remote && phase === "guess" && !iAmGuesser()) {
+      setPill("🤔", "NOW GUESSING", guesserName());
+      $("instructions").textContent = `${guesserName()} is guessing. You'll see the needle move.`;
+      actions.append(toggleBtn());
+      drawNeedle(true);
+    } else if (remote && phase === "guess") {
+      setPill("🤔", "YOUR GUESS", guesserName());
+      $("instructions").textContent = honest
+        ? `Where did ${psychicName()} put their answer? Drag the needle, then lock it in.`
+        : `Listen to ${psychicName()}'s clue, drag the needle, then lock it in.`;
+      actions.append(btn("Lock In Guess", "btn-primary btn-wide", lockGuess));
+      drawNeedle(true);
+    } else if (phase === "psychic") {
       setPill("🔮", "PSYCHIC TURN", psychicName());
       $("instructions").textContent = honest
         ? `Only ${psychicName()} looks! Drag on the dial to set your honest answer, then tap “Hide for Guessers”.`
@@ -514,7 +817,7 @@
       const res = $("result");
       res.replaceChildren();
       const head = game.mode === "duo" ? `+${pts} point${pts === 1 ? "" : "s"}!` : `${psychicName()} scored ${pts} point${pts === 1 ? "" : "s"}!`;
-      res.append(head, el("small", {}, pick(REACTIONS[pts])));
+      res.append(head, el("small", {}, REACTIONS[pts][game.reaction % REACTIONS[pts].length]));
       if (game.lastSteal) {
         const s = game.lastSteal;
         res.append(el("small", {}, s.bull ? `Bull's-eye, so no steal for ${s.team}.` : s.correct ? `${s.team} stole 1 point!` : `${s.team}'s steal missed.`));
@@ -534,7 +837,7 @@
     const duo = game.mode === "duo";
     const rename = (p) => () => {
       const name = prompt("Rename", p.name);
-      if (name && name.trim()) { p.name = name.trim().slice(0, 24); render(); }
+      if (name && name.trim()) { p.name = name.trim().slice(0, 24); update(); }
     };
 
     game.players.forEach((p, i) => {
@@ -562,8 +865,8 @@
         el("span", { class: "team-name", style: "cursor:default" }, "Shared score"),
         el("span", { class: "score" }, String(game.sharedScore)),
         el("span", { class: "score-adjust" },
-          el("button", { type: "button", class: "icon-btn", "aria-label": "Minus 1", onclick: () => { game.sharedScore--; renderScores(); } }, "−"),
-          el("button", { type: "button", class: "icon-btn", "aria-label": "Plus 1", onclick: () => { game.sharedScore++; renderScores(); } }, "+"))));
+          el("button", { type: "button", class: "icon-btn", "aria-label": "Minus 1", onclick: () => { game.sharedScore--; update(); } }, "−"),
+          el("button", { type: "button", class: "icon-btn", "aria-label": "Plus 1", onclick: () => { game.sharedScore++; update(); } }, "+"))));
       const s = game.stats;
       const avg = s.rounds ? (game.sharedScore / s.rounds).toFixed(1) : "–";
       const stats = $("duoStats");
@@ -593,18 +896,20 @@
   function initGlobal() {
     $("btnHowTo").addEventListener("click", () => $("howToDialog").showModal());
     $("btnNewGame").addEventListener("click", () => {
-      if (game.phase !== "setup" && !confirm("Start a new game? Current scores will be cleared.")) return;
+      if (net.active) {
+        if (!confirm("Leave this room? You can rejoin it later from the setup screen.")) return;
+        leaveRoom(false);
+      } else if (game.phase !== "setup" && !confirm("Start a new game? Current scores will be cleared.")) return;
       stopTimer();
       game.phase = "setup";
       setupTeams = game.mode === "teams" ? game.players.map((p) => p.name) : setupTeams;
-      if (game.mode === "duo" && game.players.length === 2) {
+      if (game.mode === "duo" && game.players.length === 2 && !net.code) {
         $("playerA").value = game.players[0].name;
         $("playerB").value = game.players[1].name;
       }
       renderSetupTeams();
       renderDeckList();
-      $("gameScreen").classList.add("hidden");
-      $("setupScreen").classList.remove("hidden");
+      showScreen("setupScreen");
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
     $("btnAddTeamGame").addEventListener("click", () => {
@@ -618,4 +923,5 @@
   initCustom();
   initDial();
   initGlobal();
+  initRemote();
 })();
