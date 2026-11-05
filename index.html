@@ -37,6 +37,21 @@
       </div>
     </section>
 
+    <section class="card" id="remoteSetup">
+      <h2>Play on two devices</h2>
+      <p class="hint" style="margin-top:0">Each of you plays on your own phone. Talk on a call while you play.</p>
+      <div id="remoteControls" class="remote-controls">
+        <input id="remoteName" class="input" maxlength="24" placeholder="Your name" autocomplete="off">
+        <button type="button" class="btn btn-primary" id="btnCreateRoom">Create a room</button>
+        <div class="field-row">
+          <input id="roomCodeInput" class="input code-input" maxlength="4" placeholder="Room code" autocomplete="off" autocapitalize="characters" spellcheck="false">
+          <button type="button" class="btn btn-secondary" id="btnJoinRoom">Join</button>
+        </div>
+        <button type="button" class="btn btn-secondary hidden" id="btnRejoin">Rejoin room</button>
+        <p class="error hidden" id="remoteError" role="alert"></p>
+      </div>
+    </section>
+
     <section class="card hidden" id="teamsSetup">
       <h2>Teams</h2>
       <ul id="teamList" class="team-edit-list"></ul>
@@ -74,11 +89,24 @@
       </label>
     </section>
 
-    <button type="button" class="btn btn-primary btn-big" id="btnStart">Start Playing</button>
+    <button type="button" class="btn btn-primary btn-big" id="btnStart">Start Playing on This Device</button>
+  </main>
+
+  <!-- ============ LOBBY (remote) ============ -->
+  <main id="lobbyScreen" class="screen hidden">
+    <section class="card lobby">
+      <p class="hint" style="margin-top:0">Room code</p>
+      <p class="room-code" id="lobbyCode">----</p>
+      <p id="lobbyStatus">Waiting for the other player to join…</p>
+      <button type="button" class="btn btn-primary" id="btnShare">Share invite link</button>
+      <p class="hint" id="shareNote"></p>
+      <button type="button" class="btn btn-secondary btn-small" id="btnLeaveLobby">Cancel</button>
+    </section>
   </main>
 
   <!-- ============ GAME ============ -->
   <main id="gameScreen" class="screen hidden">
+    <div class="room-bar hidden" id="roomBar"></div>
     <div class="pill" id="statusPill">
       <span class="pill-emoji" id="pillEmoji">🔮</span>
       <span class="pill-label" id="pillLabel">PSYCHIC TURN</span>
@@ -151,6 +179,7 @@
           <li><b>0 points</b> miss</li>
         </ul>
       </li>
+      <li><b>Two devices:</b> in Duo mode, one player creates a room and shares the code. The Psychic's phone shows the target, and the guesser's phone never does.</li>
       <li>Play goes on forever. Tap <b>New Game</b> to change modes, decks or players.</li>
     </ol>
     <form method="dialog"><button class="btn btn-primary">Got it!</button></form>
@@ -172,6 +201,8 @@
     <form method="dialog"><button class="btn btn-secondary">Done</button></form>
   </dialog>
 
+  <script src="js/firebase-config.js"></script>
+  <script src="js/net.js"></script>
   <script src="js/decks.js"></script>
   <script src="js/app.js"></script>
 </body>

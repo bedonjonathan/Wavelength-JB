@@ -1,0 +1,13 @@
+{
+  "rules": {
+    "rooms": {
+      "$code": {
+        ".read": "$code.matches(/^[A-Z2-9]{4}$/)",
+        ".write": "$code.matches(/^[A-Z2-9]{4}$/)",
+        "cards": { ".validate": "newData.hasChildren()" },
+        "needle": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
+        "online": { "$seat": { ".validate": "($seat === '0' || $seat === '1') && newData.isBoolean()" } }
+      }
+    }
+  }
+}
