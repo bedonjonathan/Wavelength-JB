@@ -5,10 +5,9 @@
  */
 window.DECKS = [
   {
-    id: "couples-therapy",
-    name: "💞 Couples: Deep Talk",
-    blurb: "Therapy-style questions about communication, conflict, needs and the future",
-    featured: true,
+    id: "deep-talk",
+    name: "Deep Talk",
+    blurb: "Meaningful questions about communication, needs and the future",
     cards: [
       // Communication
       { q: "When something is bothering me, I usually…", l: "Bottle it up", r: "Say it right away" },
@@ -35,15 +34,11 @@ window.DECKS = [
       { q: "Using humor to break the tension during conflict", l: "Makes it worse", r: "Saves us" },
       // Love & affection
       { q: "What makes me feel most loved", l: "Words", r: "Actions" },
-      { q: "How much physical affection I want day to day", l: "A little", r: "A lot" },
       { q: "How much quality time I need each week", l: "A little", r: "Tons" },
       { q: "How much gifts mean to me", l: "Not much", r: "A lot" },
-      { q: "When I'm sad, I want you to…", l: "Give me space", r: "Hold me close" },
       { q: "How appreciated I've felt lately", l: "Not at all", r: "Completely" },
       { q: "How connected I've felt to you this month", l: "Distant", r: "Very close" },
       { q: "How much fun we've been having lately", l: "Very little", r: "So much" },
-      { q: "How often I want date nights", l: "Once in a while", r: "Every week" },
-      { q: "Public displays of affection", l: "Keep it private", r: "Love it anywhere" },
       // Needs & independence
       { q: "How much alone time I need", l: "Almost none", r: "A lot" },
       { q: "How much time I want with my own friends", l: "Rarely", r: "Often" },
@@ -54,50 +49,31 @@ window.DECKS = [
       { q: "When I'm stressed, I want you to…", l: "Leave me be", r: "Take care of me" },
       { q: "How I show stress", l: "Hide it", r: "Show it all" },
       // Trust & boundaries
-      { q: "How jealous I tend to feel", l: "Never", r: "Often" },
-      { q: "How much I trust you with my deepest feelings", l: "Not yet", r: "Completely" },
-      { q: "Staying in touch with exes", l: "Totally fine", r: "Not okay" },
-      { q: "Sharing our relationship on social media", l: "Keep us offline", r: "Share it all" },
       { q: "Talking to friends about our problems", l: "Never", r: "Always" },
       { q: "How comfortable I am talking about my past", l: "Off-limits", r: "Open book" },
       { q: "How much my upbringing shapes how I love", l: "Barely", r: "Hugely" },
       // Intimacy (non-explicit)
-      { q: "How important physical intimacy is to me in a relationship", l: "A nice extra", r: "Essential" },
-      { q: "How easy it is for me to talk about our intimate life", l: "Very hard", r: "Very easy" },
-      { q: "Starting closeness or affection feels…", l: "Scary", r: "Natural" },
       // Home & money
       { q: "My relationship with money", l: "Saver", r: "Spender" },
-      { q: "How we should manage money", l: "Fully separate", r: "Fully joint" },
-      { q: "How fair our split of chores feels to me", l: "Very unfair", r: "Perfectly fair" },
       { q: "How tidy home needs to be for me to relax", l: "Lived-in is fine", r: "Spotless" },
       { q: "Talking about money makes me…", l: "Anxious", r: "Calm" },
-      { q: "Big purchases should be…", l: "My own call", r: "Decided together" },
       // Family & future
-      { q: "How involved our families should be in our life", l: "Hands off", r: "Very involved" },
-      { q: "Holiday traditions: we should…", l: "Keep our families' ways", r: "Make our own" },
-      { q: "Where I see us living long term", l: "Busy city", r: "Quiet countryside" },
       { q: "Right now my priority is…", l: "Career", r: "Family" },
-      { q: "Taking big risks together (moving, a business)", l: "Play it safe", r: "Go for it" },
-      { q: "How much I worry about our future", l: "Not at all", r: "Constantly" },
       { q: "How clear I am on what I want in 5 years", l: "No idea", r: "Crystal clear" },
       { q: "How supported I feel in my personal goals", l: "Unsupported", r: "Cheered on" },
-      { q: "How I feel about couples therapy or counseling", l: "Skeptical", r: "All for it" },
       { q: "Change in a relationship feels…", l: "Threatening", r: "Exciting" },
       { q: "How patient I am with your habits", l: "Short fuse", r: "Endless patience" },
-      { q: "How much we've grown as a couple this year", l: "Stuck", r: "Huge growth" },
     ],
   },
   {
-    id: "couples-everyday",
-    name: "🥰 Couples: Everyday",
-    blurb: "Light, healthy get-to-know-you questions",
-    featured: true,
+    id: "get-to-know",
+    name: "Get to Know You",
+    blurb: "Light questions about habits and preferences",
     cards: [
       { q: "My ideal Friday night", l: "Couch & blanket", r: "Out on the town" },
       { q: "How I feel about surprises", l: "Hate them", r: "Live for them" },
       { q: "When I'm at my best", l: "Early morning", r: "Late night" },
       { q: "My perfect vacation", l: "Relax on a beach", r: "Nonstop adventure" },
-      { q: "Pets sleeping in the bed", l: "Never", r: "Always" },
       { q: "Cooking together is…", l: "Chaos", r: "Bliss" },
       { q: "Texting during the day", l: "Barely", r: "Constantly" },
       { q: "How much remembering little dates matters to me", l: "Not much", r: "Hugely" },
@@ -109,23 +85,52 @@ window.DECKS = [
       { q: "The gifts I love most are…", l: "Practical", r: "Sentimental" },
       { q: "Having friends over", l: "Drains me", r: "Fills me up" },
       { q: "Planning trips", l: "Dread it", r: "Love it" },
-      { q: "Flirting after years together", l: "Unnecessary", r: "Essential" },
       { q: "A lazy Sunday should be…", l: "Productive", r: "Do nothing" },
-      { q: "Love notes and little messages", l: "Cheesy", r: "Sweet" },
       { q: "Sharing food off my plate", l: "Hands off", r: "What's mine is yours" },
       { q: "Being on time", l: "Fashionably late", r: "Always early" },
       { q: "Talking during movies", l: "Total silence", r: "Running commentary" },
       { q: "How I feel about trying a new hobby together", l: "Nervous", r: "Can't wait" },
       { q: "Weekend plans should be…", l: "Fully planned", r: "Totally spontaneous" },
-      { q: "How much I like cuddling while we sleep", l: "Give me room", r: "Hold me all night" },
-      { q: "Saying “I love you” in public", l: "Embarrassing", r: "Proudly" },
-      { q: "My favorite way to make up after a silly spat", l: "A joke", r: "A long hug" },
       { q: "How sentimental I am about our photos & keepsakes", l: "Not at all", r: "Keep everything" },
     ],
   },
   {
+    id: "just-us",
+    name: "Just Us",
+    blurb: "For two people who know each other well",
+    cards: [
+      { q: "Public displays of affection", l: "Keep it private", r: "Love it anywhere" },
+      { q: "How often I want date nights", l: "Once in a while", r: "Every week" },
+      { q: "How much physical affection I want day to day", l: "A little", r: "A lot" },
+      { q: "When I'm sad, I want you to…", l: "Give me space", r: "Hold me close" },
+      { q: "How jealous I tend to feel", l: "Never", r: "Often" },
+      { q: "Staying in touch with exes", l: "Totally fine", r: "Not okay" },
+      { q: "Sharing our relationship on social media", l: "Keep us offline", r: "Share it all" },
+      { q: "How important physical intimacy is to me in a relationship", l: "A nice extra", r: "Essential" },
+      { q: "How easy it is for me to talk about our intimate life", l: "Very hard", r: "Very easy" },
+      { q: "Starting closeness or affection feels…", l: "Scary", r: "Natural" },
+      { q: "How we should manage money", l: "Fully separate", r: "Fully joint" },
+      { q: "How fair our split of chores feels to me", l: "Very unfair", r: "Perfectly fair" },
+      { q: "Big purchases should be…", l: "My own call", r: "Decided together" },
+      { q: "How involved our families should be in our life", l: "Hands off", r: "Very involved" },
+      { q: "Holiday traditions: we should…", l: "Keep our families' ways", r: "Make our own" },
+      { q: "Where I see us living long term", l: "Busy city", r: "Quiet countryside" },
+      { q: "Taking big risks together (moving, a business)", l: "Play it safe", r: "Go for it" },
+      { q: "How much I worry about our future", l: "Not at all", r: "Constantly" },
+      { q: "How I feel about couples therapy or counseling", l: "Skeptical", r: "All for it" },
+      { q: "How much we've grown as a couple this year", l: "Stuck", r: "Huge growth" },
+      { q: "Pets sleeping in the bed", l: "Never", r: "Always" },
+      { q: "Flirting after years together", l: "Unnecessary", r: "Essential" },
+      { q: "How much I like cuddling while we sleep", l: "Give me room", r: "Hold me all night" },
+      { q: "Saying “I love you” in public", l: "Embarrassing", r: "Proudly" },
+      { q: "My favorite way to make up after a silly spat", l: "A joke", r: "A long hug" },
+      { q: "Love notes and little messages", l: "Cheesy", r: "Sweet" },
+      { q: "How much I trust you with my deepest feelings", l: "Not yet", r: "Completely" },
+    ],
+  },
+  {
     id: "classic",
-    name: "🌈 Classic",
+    name: "Classic",
     blurb: "General spectrums for anyone",
     cards: [
       { l: "Cold", r: "Hot" }, { l: "Underrated", r: "Overrated" }, { l: "Useless", r: "Useful" },
@@ -146,7 +151,7 @@ window.DECKS = [
   },
   {
     id: "food",
-    name: "🍕 Food & Drink",
+    name: "Food & Drink",
     blurb: "Tasty debates",
     cards: [
       { l: "Sweet", r: "Savory" }, { l: "Breakfast food", r: "Dinner food" },
@@ -161,7 +166,7 @@ window.DECKS = [
   },
   {
     id: "pop",
-    name: "🎬 Pop Culture",
+    name: "Pop Culture",
     blurb: "Movies, music & TV",
     cards: [
       { l: "Bad movie", r: "Good movie" }, { l: "Forgettable song", r: "Catchy song" },
@@ -175,7 +180,7 @@ window.DECKS = [
   },
   {
     id: "work",
-    name: "💼 Work & School",
+    name: "Work & School",
     blurb: "Jobs, classes & meetings",
     cards: [
       { l: "Easy class", r: "Hard class" }, { l: "Bad job", r: "Dream job" },
@@ -188,7 +193,7 @@ window.DECKS = [
   },
   {
     id: "sports",
-    name: "⚽ Sports & Games",
+    name: "Sports & Games",
     blurb: "Athletes, games & hobbies",
     cards: [
       { l: "Easy sport", r: "Hard sport" }, { l: "Boring to watch", r: "Exciting to watch" },
@@ -201,7 +206,7 @@ window.DECKS = [
   },
   {
     id: "party",
-    name: "🎉 Party",
+    name: "Party",
     blurb: "Social, silly, a little spicy",
     cards: [
       { l: "Bad first date idea", r: "Great first date idea" }, { l: "Red flag", r: "Green flag" },
@@ -214,7 +219,7 @@ window.DECKS = [
   },
   {
     id: "family",
-    name: "🧸 Family & Kids",
+    name: "Family & Kids",
     blurb: "Simple spectrums for all ages",
     cards: [
       { l: "Not scary", r: "Scary" }, { l: "Yucky", r: "Yummy" },
@@ -227,7 +232,7 @@ window.DECKS = [
   },
   {
     id: "halloween",
-    name: "🎃 Halloween",
+    name: "Halloween",
     blurb: "Spooky season",
     seasonal: true,
     cards: [
@@ -240,7 +245,7 @@ window.DECKS = [
   },
   {
     id: "winter",
-    name: "🎄 Winter Holidays",
+    name: "Winter Holidays",
     blurb: "Cozy & festive",
     seasonal: true,
     cards: [
@@ -253,7 +258,7 @@ window.DECKS = [
   },
   {
     id: "valentine",
-    name: "💘 Valentine's",
+    name: "Valentine's",
     blurb: "Romance & cheese",
     seasonal: true,
     cards: [

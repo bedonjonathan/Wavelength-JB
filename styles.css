@@ -138,7 +138,7 @@ body {
 .seg.active { background: var(--surface); color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
 .field-row { display: flex; gap: 8px; align-items: center; }
 .field-row .input { flex: 1; min-width: 0; }
-.heart { color: var(--primary); font-size: 20px; }
+.vs { color: var(--muted); font-size: 18px; }
 .input {
   width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--border);
   background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px;
@@ -234,8 +234,8 @@ body {
 .score { font-weight: 800; font-size: 20px; min-width: 56px; text-align: center; }
 .score-adjust { display: flex; gap: 4px; }
 .score-adjust .icon-btn { min-width: 34px; height: 34px; font-size: 16px; }
-.couple-stats { display: flex; justify-content: center; gap: 18px; color: var(--muted); font-size: 14px; margin-bottom: 10px; flex-wrap: wrap; }
-.couple-stats b { color: var(--text); }
+.duo-stats { display: flex; justify-content: center; gap: 18px; color: var(--muted); font-size: 14px; margin-bottom: 10px; flex-wrap: wrap; }
+.duo-stats b { color: var(--text); }
 #btnAddTeamGame { display: block; margin: 6px auto 0; }
 
 /* ===== Dialogs ===== */
