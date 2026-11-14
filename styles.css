@@ -271,3 +271,7 @@ body {
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #22c55e; margin-right: 4px; }
 .dot.off { background: var(--danger); }
 .waiting { text-align: center; color: var(--muted); font-style: italic; margin: 6px 0; }
+
+.name-cell { display: flex; flex-direction: column; min-width: 0; }
+.role { color: var(--muted); font-size: 12px; }
+#btnSelectAll { margin-right: 6px; }

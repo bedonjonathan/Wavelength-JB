@@ -51,10 +51,6 @@
     timer: 0,
     steal: true,
   };
-  const MODE_DECKS = {
-    duo: ["deep-talk", "get-to-know", "just-us"],
-    teams: ["classic", "get-to-know", "food", "pop"],
-  };
   const prefs = Object.assign({}, defaults, load(STORE.prefs, {}));
   // Migrate settings saved by earlier versions.
   if (prefs.mode === "couple") prefs.mode = "duo";
@@ -139,6 +135,13 @@
     });
   }
 
+  const ALL_DECK_IDS = () => [...window.DECKS.map((d) => d.id), "custom"];
+
+  function renderSelectAll() {
+    const all = ALL_DECK_IDS().every((id) => prefs.decks.includes(id));
+    $("btnSelectAll").textContent = all ? "Clear all" : "Select all";
+  }
+
   function renderDeckList() {
     const list = $("deckList");
     list.replaceChildren();
@@ -147,11 +150,13 @@
       const cb = el("input", { type: "checkbox", value: d.id, checked: prefs.decks.includes(d.id) });
       cb.addEventListener("change", () => {
         prefs.decks = cb.checked ? [...new Set([...prefs.decks, d.id])] : prefs.decks.filter((x) => x !== d.id);
+        renderSelectAll();
       });
       list.append(el("label", { class: "deck" }, cb,
         el("span", {}, el("b", {}, d.name), el("small", {}, `${d.blurb} · ${d.cards.length} cards`))));
     });
     $("customCount").textContent = customCards.length;
+    renderSelectAll();
   }
 
   function initSetup() {
@@ -167,15 +172,20 @@
       // Sensible default target source per mode (still changeable).
       prefs.targetSource = prefs.mode === "duo" ? "honest" : "random";
       $("targetSource").value = prefs.targetSource;
-      prefs.decks = [...MODE_DECKS[prefs.mode], ...(prefs.decks.includes("custom") ? ["custom"] : [])];
       renderMode();
-      renderDeckList();
     }));
     $("btnAddTeamSetup").addEventListener("click", () => {
       setupTeams.push(`Team ${setupTeams.length + 1}`);
       renderSetupTeams();
     });
     $("btnStart").addEventListener("click", startGame);
+    $("btnSelectAll").addEventListener("click", () => {
+      const all = ALL_DECK_IDS().every((id) => prefs.decks.includes(id));
+      prefs.decks = all ? [] : ALL_DECK_IDS();
+      renderDeckList();
+    });
+    // Every deck starts selected when the page loads.
+    prefs.decks = ALL_DECK_IDS();
     renderMode();
     renderSetupTeams();
     renderDeckList();
@@ -330,7 +340,10 @@
     game.stats.streak = pts > 0 ? game.stats.streak + 1 : 0;
     game.stats.bestStreak = Math.max(game.stats.bestStreak, game.stats.streak);
 
-    if (game.mode === "duo") game.sharedScore += pts;
+    if (game.mode === "duo") {
+      game.sharedScore += pts;
+      game.players[(game.turn + 1) % game.players.length].score += pts;
+    }
     else game.players[game.turn].score += pts;
 
     const si = stealTeamIndex();
@@ -816,7 +829,7 @@
       $("instructions").classList.add("hidden");
       const res = $("result");
       res.replaceChildren();
-      const head = game.mode === "duo" ? `+${pts} point${pts === 1 ? "" : "s"}!` : `${psychicName()} scored ${pts} point${pts === 1 ? "" : "s"}!`;
+      const head = game.mode === "duo" ? `${guesserName()} scored ${pts} point${pts === 1 ? "" : "s"}!` : `${psychicName()} scored ${pts} point${pts === 1 ? "" : "s"}!`;
       res.append(head, el("small", {}, REACTIONS[pts][game.reaction % REACTIONS[pts].length]));
       if (game.lastSteal) {
         const s = game.lastSteal;
@@ -843,10 +856,13 @@
     game.players.forEach((p, i) => {
       const active = i === game.turn;
       const nameBtn = el("button", { type: "button", class: "team-name", onclick: rename(p) }, p.name);
-      let middle, right;
+      let middle, right, nameCell = nameBtn;
       if (duo) {
-        middle = el("span", { class: "hint", style: "margin:0" }, active ? "Psychic" : "Guesser");
-        right = el("span");
+        nameCell = el("span", { class: "name-cell" }, nameBtn, el("small", { class: "role" }, active ? "Psychic" : "Guesser"));
+        middle = el("span", { class: "score" }, String(p.score));
+        right = el("span", { class: "score-adjust" },
+          el("button", { type: "button", class: "icon-btn", "aria-label": `Minus 1 for ${p.name}`, onclick: () => { p.score--; update(); } }, "−"),
+          el("button", { type: "button", class: "icon-btn", "aria-label": `Plus 1 for ${p.name}`, onclick: () => { p.score++; update(); } }, "+"));
       } else {
         middle = el("span", { class: "score" }, String(p.score));
         right = el("span", { class: "score-adjust" },
@@ -857,7 +873,7 @@
             onclick: () => deleteTeam(i),
           }, "✕"));
       }
-      list.append(el("li", { class: active ? "active" : "" }, nameBtn, middle, right));
+      list.append(el("li", { class: active ? "active" : "" }, nameCell, middle, right));
     });
 
     if (duo) {
@@ -878,7 +894,7 @@
     }
     $("duoStats").classList.toggle("hidden", !duo);
     $("btnAddTeamGame").classList.toggle("hidden", duo);
-    $("scoreHint").textContent = duo ? "Tap a name to rename." : "Tap a team name to rename. Use − / + to fix a score.";
+    $("scoreHint").textContent = duo ? "Points go to whoever guessed. Tap a name to rename, or use − / + to fix a score." : "Tap a team name to rename. Use − / + to fix a score.";
   }
 
   function deleteTeam(i) {
