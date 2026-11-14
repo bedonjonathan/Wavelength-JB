@@ -21,7 +21,7 @@ The **Play on two devices** card stays hidden until Firebase is set up (about 10
 
 To test two-device play without Firebase, open the page in two tabs of the same browser with `?net=local` added to the URL.
 
-**Limits:** anyone with a room code can join or read that room. Codes are random, but this is a casual game, not a secure one. Old rooms aren't deleted automatically; you can clear `rooms` from the Firebase console now and then.
+**Privacy & limits:** anyone who knows a room's code can join or read that room, so share codes only with the person you're playing with. Rooms are deleted when the host cancels or the last player leaves, and any room idle for over a day is deleted the next time someone creates a room. The database rules also reject oversized or unexpected data. After changing `database.rules.json`, paste it into the Firebase console again (**Realtime Database → Rules → Publish**).
 
 ## Features
 - **Show / Hide Target** toggle during the Psychic, Guess and Steal phases, so the Psychic can re-check the target without moving the round forward. A red banner warns guessers while it's showing.

@@ -445,6 +445,7 @@
     setRemoteBusy(true);
     try {
       const t = await window.Net.connect();
+      t.sweep().catch(() => {}); // tidy up abandoned rooms in the background
       let code = makeCode();
       for (let i = 0; i < 5 && (await t.exists(code)); i++) code = makeCode();
       game.phase = "lobby";
@@ -465,7 +466,11 @@
     try {
       const t = await window.Net.connect();
       const room = await t.read(code);
-      if (!room || !room.state) { remoteError("No room with that code. Check it and try again."); return; }
+      if (!room || !room.state) {
+        if (savedSeat != null) { save(STORE.room, null); renderRejoin(); remoteError("That room has ended."); return; }
+        remoteError("No room with that code. Check it and try again.");
+        return;
+      }
       const players = Object.values(room.state.players || {});
       const same = (a, b) => (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
       let seat = savedSeat;
@@ -520,8 +525,16 @@
   }
 
   // forget=true also drops the saved room, so "Rejoin" disappears.
+  // The room itself is deleted when nobody else is still in it.
   function leaveRoom(forget) {
-    if (net.t) net.t.leave();
+    const other = 1 - net.seat;
+    const alone = game.phase === "lobby" ? net.seat === 0 : !!net.t && net.t.kind === "firebase" && !(net.online && net.online[other]);
+    const deleting = !!(net.t && net.code && alone);
+    if (net.t) net.t.leave(deleting);
+    if (deleting) {
+      net.t.remove(net.code).catch(() => {});
+      forget = true;
+    }
     stopTimer();
     Object.assign(net, { active: false, t: null, code: null, seat: null, online: {} });
     if (forget) save(STORE.room, null);

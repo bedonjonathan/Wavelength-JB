@@ -4,9 +4,157 @@
       "$code": {
         ".read": "$code.matches(/^[A-Z2-9]{4}$/)",
         ".write": "$code.matches(/^[A-Z2-9]{4}$/)",
-        "cards": { ".validate": "newData.hasChildren()" },
-        "needle": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
-        "online": { "$seat": { ".validate": "($seat === '0' || $seat === '1') && newData.isBoolean()" } }
+        ".validate": "newData.hasChildren(['cards', 'state', 'created'])",
+        "created": {
+          ".validate": "newData.isNumber()"
+        },
+        "active": {
+          ".validate": "newData.isNumber()"
+        },
+        "cards": {
+          "$i": {
+            ".validate": "$i.matches(/^[0-9]{1,3}$/) && newData.hasChildren(['l', 'r'])",
+            "l": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "r": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "q": {
+              ".validate": "newData.isString() && newData.val().length <= 160"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "needle": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+        },
+        "online": {
+          "$seat": {
+            ".validate": "($seat === '0' || $seat === '1') && newData.isBoolean()"
+          }
+        },
+        "state": {
+          ".validate": "newData.hasChildren(['rev', 'phase', 'players'])",
+          "rev": {
+            ".validate": "newData.isNumber()"
+          },
+          "phase": {
+            ".validate": "newData.isString() && newData.val().matches(/^(lobby|psychic|guess|steal|reveal)$/)"
+          },
+          "mode": {
+            ".validate": "newData.isString() && newData.val().length <= 10"
+          },
+          "players": {
+            "$i": {
+              ".validate": "$i.matches(/^[01]$/) && newData.hasChildren(['score'])",
+              "name": {
+                ".validate": "newData.isString() && newData.val().length <= 24"
+              },
+              "score": {
+                ".validate": "newData.isNumber()"
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          },
+          "turn": {
+            ".validate": "newData.isNumber()"
+          },
+          "sharedScore": {
+            ".validate": "newData.isNumber()"
+          },
+          "stats": {
+            "rounds": {
+              ".validate": "newData.isNumber()"
+            },
+            "bulls": {
+              ".validate": "newData.isNumber()"
+            },
+            "streak": {
+              ".validate": "newData.isNumber()"
+            },
+            "bestStreak": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          },
+          "card": {
+            ".validate": "newData.hasChildren(['l', 'r'])",
+            "l": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "r": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "q": {
+              ".validate": "newData.isString() && newData.val().length <= 160"
+            },
+            "$other": {
+              ".validate": false
+            }
+          },
+          "target": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+          },
+          "needle": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+          },
+          "stealGuess": {
+            ".validate": "newData.isString() && newData.val().length <= 5"
+          },
+          "lastPoints": {
+            ".validate": "newData.isNumber()"
+          },
+          "lastSteal": {
+            ".validate": false
+          },
+          "order": {
+            "$i": {
+              ".validate": "$i.matches(/^[0-9]{1,3}$/) && newData.isNumber()"
+            }
+          },
+          "poolPos": {
+            ".validate": "newData.isNumber()"
+          },
+          "settings": {
+            "targetSource": {
+              ".validate": "newData.isString() && newData.val().length <= 10"
+            },
+            "timer": {
+              ".validate": "newData.isNumber()"
+            },
+            "steal": {
+              ".validate": "newData.isBoolean()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          },
+          "reaction": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "expiry": {
+      "$day": {
+        ".read": "$day.matches(/^[0-9]{13}$/) && $day <= '' + (now - 172800000)",
+        "$code": {
+          ".write": "$day.matches(/^[0-9]{13}$/) && $code.matches(/^[A-Z2-9]{4}$/)",
+          ".validate": "newData.val() === true"
+        }
       }
     }
   }
