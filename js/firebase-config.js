@@ -13,4 +13,12 @@
  *   appId: "1:123:web:abc",
  * };
  */
-window.FIREBASE_CONFIG = null;
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAMYAgunnkXo5UVyt0QmvsNVnAmzC1xPlk",
+  authDomain: "wavelenght-7d7d2.firebaseapp.com",
+  databaseURL: "https://wavelenght-7d7d2-default-rtdb.firebaseio.com",
+  projectId: "wavelenght-7d7d2",
+  storageBucket: "wavelenght-7d7d2.firebasestorage.app",
+  messagingSenderId: "347770735292",
+  appId: "1:347770735292:web:97bd505990ce8240bbdeb9",
+};
