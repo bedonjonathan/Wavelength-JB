@@ -249,7 +249,7 @@
       if (order.length > 1 && order[0] === last) order.push(order.shift());
       game.poolPos = 0;
     }
-    return game.cards[order[game.poolPos++]];
+    return game.cards[order[game.poolPos++]] || { l: "Left", r: "Right" };
   }
 
   // ---------- Game flow ----------
@@ -408,6 +408,7 @@
     game.lastSteal = s.lastSteal || null;
     game.players = Object.values(s.players || {}).map((p) => ({ name: p.name || "", score: p.score || 0 }));
     game.order = Object.values(s.order || {});
+    sanitizeRemote();
     if (game.phase !== prevPhase || game.turn !== prevTurn || game.rev < prevRev) {
       if (game.phase === "guess") startTimer(); else stopTimer();
       if (game.phase === "psychic") net.peekHidden = false;
@@ -418,6 +419,18 @@
       return;
     }
     render();
+  }
+
+  // Remote values are typed-checked by the database rules, but ranges can't be:
+  // clamp anything used as an index so bad data can't crash this player's screen.
+  function sanitizeRemote() {
+    const n = game.players.length;
+    game.turn = Number.isInteger(game.turn) && game.turn >= 0 && game.turn < n ? game.turn : 0;
+    game.order = game.order.filter((i) => Number.isInteger(i) && i >= 0 && i < game.cards.length);
+    game.poolPos = Number.isInteger(game.poolPos) && game.poolPos >= 0 ? game.poolPos : 0;
+    if (!game.card || typeof game.card.l !== "string" || typeof game.card.r !== "string") {
+      game.card = { l: "Left", r: "Right" };
+    }
   }
 
   const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -505,6 +518,7 @@
     game.players = Object.values(s.players || {}).map((p) => ({ name: p.name || "", score: p.score || 0 }));
     while (game.players.length < 2) game.players.push({ name: "", score: 0 });
     game.order = Object.values(s.order || {});
+    sanitizeRemote();
   }
 
   function enterRoom(t, code, seat) {
