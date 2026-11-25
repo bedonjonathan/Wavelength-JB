@@ -784,8 +784,10 @@
 
     $("labelLeft").textContent = card.l;
     $("labelRight").textContent = card.r;
-    $("question").textContent = card.q || "";
-    $("question").classList.toggle("hidden", !card.q);
+    // With a random target the Psychic gives a spoken clue, so the question isn't needed.
+    const showQuestion = !!card.q && honest;
+    $("question").textContent = showQuestion ? card.q : "";
+    $("question").classList.toggle("hidden", !showQuestion);
     $("result").classList.add("hidden");
     $("instructions").classList.remove("hidden");
     $("dialFace").classList.toggle("revealed", targetShown());
