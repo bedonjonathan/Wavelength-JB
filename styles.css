@@ -113,6 +113,7 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 .btn:active { transform: scale(.97); }
+.btn { touch-action: manipulation; } /* no double-tap-to-zoom delay on buttons */
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: var(--on-primary); }
 .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }

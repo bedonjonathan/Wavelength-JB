@@ -274,6 +274,21 @@
 
   function showScreen(id) {
     ["setupScreen", "lobbyScreen", "gameScreen"].forEach((s) => $(s).classList.toggle("hidden", s !== id));
+    if (id !== "gameScreen") viewKey = "";
+  }
+
+  // Each step of a round (psychic, guess, steal, reveal, next turn) is a "view". When the view
+  // changes we jump back to the top so the dial is on screen, and for a moment we ignore taps,
+  // because the next step's button sits in the same spot (e.g. Lock In Guess -> Next Round) and
+  // a quick double-tap would otherwise skip straight past the reveal.
+  let viewKey = "", viewChangedAt = 0;
+  const TAP_GUARD_MS = 600;
+  function noteView() {
+    const key = `${game.phase}|${game.turn}|${game.stats.rounds}`;
+    if (key === viewKey) return;
+    viewKey = key;
+    viewChangedAt = Date.now();
+    window.scrollTo(0, 0);
   }
 
   function startGame() {
@@ -281,7 +296,6 @@
     if (!initGame(prefs.mode === "duo" ? prefs.players : prefs.teams)) return;
     showScreen("gameScreen");
     newRound();
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function randomTarget() { return 4 + Math.random() * 92; }
@@ -301,8 +315,8 @@
 
   function skipQuestion() {
     game.card = drawCard();
-    if (game.settings.targetSource !== "honest") game.target = randomTarget();
-    else game.target = 50;
+    game.needle = 50;
+    game.target = game.settings.targetSource === "honest" ? 50 : randomTarget();
     update();
   }
 
@@ -718,7 +732,7 @@
       if (deg < 0) deg = s.x < CX ? 180 : 0; // below the baseline: snap to nearest end
       game.needle = Math.min(100, Math.max(0, (180 - deg) / 1.8));
       if (game.phase === "psychic") game.target = game.needle;
-      drawNeedle(game.phase !== "psychic");
+      drawNeedle(game.phase !== "psychic" || !targetShown());
       if (game.phase === "psychic") drawTarget();
       if (net.active && game.phase === "guess" && !net.needleTimer) {
         net.needleTimer = setTimeout(() => { net.needleTimer = null; net.t.setNeedle(game.needle); }, 80);
@@ -739,7 +753,8 @@
 
   // ---------- Rendering ----------
   function btn(label, cls, onclick, extra = {}) {
-    return el("button", Object.assign({ type: "button", class: `btn ${cls}`, onclick }, extra), label);
+    const guarded = (e) => { if (Date.now() - viewChangedAt < TAP_GUARD_MS) return; onclick(e); };
+    return el("button", Object.assign({ type: "button", class: `btn ${cls}`, onclick: guarded }, extra), label);
   }
   function toggleBtn() {
     const on = targetShown();
@@ -775,6 +790,7 @@
     if (game.phase === "setup") return;
     if (net.active && game.phase === "lobby") { showScreen("lobbyScreen"); renderLobby(); return; }
     showScreen("gameScreen");
+    noteView();
     renderRoomBar();
     const { card, phase } = game;
     const honest = game.settings.targetSource === "honest";
@@ -834,7 +850,7 @@
         btn("Skip Question", "btn-secondary", skipQuestion),
         toggleBtn(),
       );
-      drawNeedle(false);
+      drawNeedle(honest && !targetShown());
     } else if (phase === "guess") {
       setPill("🤔", "NOW GUESSING", guesserName());
       $("instructions").textContent = honest
