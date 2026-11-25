@@ -405,7 +405,7 @@
   function iAmPsychic() { return !net.active || net.seat === game.turn; }
   function iAmGuesser() { return !net.active || net.seat !== game.turn; }
   function targetShown() {
-    if (!net.active) return game.targetVisible;
+    if (!net.active) return game.phase === "psychic" || game.phase === "reveal" || game.targetVisible;
     if (game.phase === "reveal") return true;
     return iAmPsychic() && !net.peekHidden;
   }
@@ -732,7 +732,7 @@
       if (deg < 0) deg = s.x < CX ? 180 : 0; // below the baseline: snap to nearest end
       game.needle = Math.min(100, Math.max(0, (180 - deg) / 1.8));
       if (game.phase === "psychic") game.target = game.needle;
-      drawNeedle(game.phase !== "psychic" || !targetShown());
+      drawNeedle(game.phase !== "psychic");
       if (game.phase === "psychic") drawTarget();
       if (net.active && game.phase === "guess" && !net.needleTimer) {
         net.needleTimer = setTimeout(() => { net.needleTimer = null; net.t.setNeedle(game.needle); }, 80);
@@ -767,6 +767,8 @@
   }
 
   function psychicName() { return game.players[game.turn].name; }
+  // Teams give clues to their own team, so say "the Psychic from X"; Duo uses the player's name.
+  function psychicWho() { return game.mode === "duo" ? psychicName() : `the Psychic from ${psychicName()}`; }
   function guesserName() {
     if (game.mode === "duo") return game.players[(game.turn + 1) % game.players.length].name;
     return game.players[game.turn].name;
@@ -842,20 +844,22 @@
       drawNeedle(true);
     } else if (phase === "psychic") {
       setPill("🔮", "PSYCHIC TURN", psychicName());
+      const ends = `“${card.l}” and “${card.r}”`;
       $("instructions").textContent = honest
-        ? `Only ${psychicName()} looks! Drag on the dial to set your honest answer, then tap “Hide for Guessers”.`
-        : `Only ${psychicName()} looks! Think of a clue that points to the target, then tap “Hide for Guessers”.`;
+        ? `Only ${psychicWho()} looks! Drag on the dial to set your honest answer between ${ends}, then tap “Hide for Guessers”.`
+        : `Only ${psychicWho()} looks! The colored band is the target. Give a clue for where it sits between ${ends}, then tap “Hide for Guessers” and pass the phone.`;
       actions.append(
         btn("Hide for Guessers", "btn-primary", hideForGuessers),
         btn("Skip Question", "btn-secondary", skipQuestion),
-        toggleBtn(),
       );
-      drawNeedle(honest && !targetShown());
+      drawNeedle(false);
     } else if (phase === "guess") {
       setPill("🤔", "NOW GUESSING", guesserName());
-      $("instructions").textContent = honest
-        ? `${guesserName()}: where did ${psychicName()} put their answer? Drag the needle, then lock it in.`
-        : `${guesserName()}: listen to ${psychicName()}'s clue, drag the needle, then lock it in.`;
+      $("instructions").textContent = game.mode === "duo"
+        ? (honest
+          ? `${guesserName()}: where did ${psychicName()} put their answer? Drag the needle, then tap “Lock In Guess”.`
+          : `${guesserName()}: listen to ${psychicName()}'s clue, drag the needle, then tap “Lock In Guess”.`)
+        : `${guesserName()}: talk it over with the clue you heard, drag the needle to where you think the target is, then tap “Lock In Guess”.`;
       actions.append(btn("Lock In Guess", "btn-primary btn-wide", lockGuess), toggleBtn());
       drawNeedle(true);
     } else if (phase === "steal") {
